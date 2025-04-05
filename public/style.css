@@ -1,0 +1,267 @@
+:root {
+    --bg-color: #121212; /* Более темный фон */
+    --panel-bg: rgba(28, 28, 30, 0.8); /* Фон панелей, глассморфизм */
+    --text-color: #e0e0e0;
+    --accent-color: #64ffda; /* Яркий акцент */
+    --secondary-color: #bb86fc; /* Вторичный акцент */
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --control-bg: rgba(45, 45, 50, 0.7); /* Фон элементов управления */
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    overflow: hidden; /* Предотвращение полосы прокрутки body при анимациях */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 20px auto; /* Отступ сверху и снизу */
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px; /* Увеличенный отступ между панелями */
+}
+
+/* --- Левая Панель - Редактор --- */
+.editor-panel, .ai-panel {
+    background: var(--panel-bg);
+    border-radius: 15px; /* Более скругленные углы */
+    padding: 30px; /* Увеличенный внутренний отступ */
+    backdrop-filter: blur(10px); /* Эффект размытия фона */
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-box-shadow);
+    transition: all 0.3s ease; /* Плавные переходы */
+}
+
+.test-settings {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    align-items: center; /* Выравнивание по вертикали */
+}
+
+select, input[type="text"], button {
+    background: var(--control-bg);
+    color: var(--text-color);
+    border: 1px solid var(--glass-border);
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+select:hover, input[type="text"]:hover, button:hover {
+    background: rgba(55, 55, 60, 0.8);
+    border-color: var(--accent-color);
+}
+
+#editor { /* Контейнер для Monaco Editor */
+    width: 100%;
+    height: 500px;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    overflow: hidden; /* Важно для корректной работы Monaco Editor в глассморфизме */
+}
+
+/* --- Правая Панель - AI Tools --- */
+.ai-panel {
+    opacity: 1; /* Начальная видимость, будет управляться JS */
+    visibility: visible;
+    transform: translateX(0);
+    transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.4s ease;
+}
+
+.ai-panel.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(20px); /* Сдвиг для анимации скрытия */
+    pointer-events: none; /* Отключаем взаимодействие, когда панель скрыта */
+    position: absolute; /* Убираем из потока, чтобы не занимала место */
+}
+
+
+.cheats-toggle {
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cheats-toggle label {
+    font-size: 1.1rem;
+}
+
+.cheats-toggle input[type="checkbox"] {
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background-color: var(--control-bg);
+    border: 2px solid var(--glass-border);
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.cheats-toggle input[type="checkbox"]:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.cheats-toggle input[type="checkbox"]:checked::before {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--bg-color);
+    font-size: 1.2rem;
+}
+
+.ai-tools {
+    margin-top: 10px;
+}
+
+.ai-tool {
+    background: var(--control-bg);
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+    transform: scale(1); /* Начальное значение для анимации */
+}
+
+.ai-tool:hover {
+    background: rgba(55, 55, 60, 0.8);
+    border-color: var(--secondary-color);
+    transform: scale(1.02); /* Легкое увеличение при наведении */
+}
+
+.ai-tool h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--accent-color);
+}
+
+.ai-output {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    opacity: 0; /* Начальная прозрачность для анимации */
+    transform: translateY(10px); /* Начальный сдвиг для анимации */
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.ai-output.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.ai-result p {
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+/* --- Таймер и Контролы --- */
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+}
+
+.timer-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.timer {
+    font-size: 1.8em;
+    color: var(--accent-color);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.timer-input {
+    background: var(--control-bg);
+    color: var(--text-color);
+    border: 1px solid var(--glass-border);
+    padding: 10px;
+    border-radius: 8px;
+    width: 60px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+
+.timer-buttons button {
+    background: var(--secondary-color); /* Изменен цвет кнопок таймера */
+    color: var(--bg-color);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.timer-buttons button:hover {
+    background-color: var(--accent-color);
+    transform: scale(1.05);
+}
+
+#check-btn {
+    background: var(--accent-color); /* Основная кнопка действия */
+    color: var(--bg-color);
+    padding: 14px 30px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+#check-btn:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+
+/* --- Анимации GSAP --- */
+.ai-tool .generate-btn, .ai-tool .check-rephrase-btn {
+    background: var(--accent-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.ai-tool .generate-btn:hover, .ai-tool .check-rephrase-btn:hover {
+    background-color: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+.rephrase-textarea {
+    background: var(--control-bg);
+    color: var(--text-color);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
+    height: 80px;
+    margin-bottom: 10px;
+    resize: vertical;
+}
+
