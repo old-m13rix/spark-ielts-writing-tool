@@ -16,6 +16,11 @@
             --glass-border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        strong {
+            color: #6c5ce7;
+            text-shadow: 0 0 6px rgba(108, 92, 231, 0.7);
+        }
+
         body {
             font-family: 'Inter', system-ui, sans-serif;
             background: var(--bg-color);
@@ -205,6 +210,9 @@
             background: rgba(255,255,255,0.05);
             border-radius: 8px;
             transition: all 0.3s ease;
+            width: 102%;
+            margin-left: -6%;
+            font-size: 15px;
         }
 
         .vocab-item:hover {
@@ -217,6 +225,48 @@
             background: rgba(255,255,255,0.05);
             border-radius: 12px;
             margin-top: 15px;
+        }
+
+        .ai-panel {
+            overflow-y: auto;
+        }
+
+        #customTime {
+            background: rgba(40, 40, 60, 0.6);
+            border: var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            width: 80px;
+        }
+
+        #customTime:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        /* Автоперенос текста в редакторе */
+        .editor-container .view-lines {
+            white-space: pre-wrap !important;
+            word-break: break-word !important;
+        }
+
+        /* Улучшение отзывчивости */
+        .test-type-btn:hover {
+            transform: scale(1.05);
+            background: rgba(108, 92, 231, 0.2) !important;
+        }
+
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -260,20 +310,22 @@
 
         <div class="ai-tool">
             <h4><i class="fas fa-project-diagram"></i> Structure Generator</h4>
-            <button class="test-type-btn">Generate Outline</button>
+            <button class="test-type-btn" id="structureButton">Generate Outline</button>
         </div>
 
         <div class="ai-tool">
             <h4><i class="fas fa-book-open"></i> Vocabulary Helper</h4>
-            <button class="test-type-btn">Show Phrases</button>
+            <button class="test-type-btn" id="vocabularyButton">Show Phrases</button>
+            <div class="vocabularyHelper"></div>
         </div>
 
-        <div class="ai-tool">
+        <div class="ai-tool" id="Re-EditorSection">
             <h4><i class="fas fa-edit"></i> Smart Re-Editor</h4>
             <p>Select text to enhance</p>
         </div>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <script>
     // Initialize GSAP animations
@@ -293,10 +345,14 @@
     });
 
     // Конфигурация
-    const API_URL = 'http://localhost:3000'; // Замените на ваш URL
+    const API_URL = 'https://ielts-writing.up.railway.app'; // Замените на ваш URL
     let currentType = 'essay';
-    let currentTopic = '';
+    let currentTopic = document.getElementById('topicInput').value;
     let selectedText = '';
+
+    document.getElementById('topicInput').addEventListener('change', (e) => {
+        currentTopic = document.getElementById('topicInput').value;
+    })
 
     // Инициализация редактора Monaco
     let editor;
@@ -307,7 +363,14 @@
             language: 'plaintext',
             theme: 'vs-dark',
             automaticLayout: true,
-            minimap: { enabled: false }
+            minimap: { enabled: false },
+            wordWrap: 'on',
+            wrappingIndent: 'indent',
+            scrollBeyondLastLine: false,
+            lineNumbers: 'off',
+            glyphMargin: false,
+            folding: false,
+            lineNumbersMinChars: 0
         });
 
         // Обработчик выделения текста для Re-Editor
@@ -331,6 +394,24 @@
         timerElement.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     };
 
+    // Улучшенный таймер
+    document.getElementById('customTime').addEventListener('change', function(e) {
+        const minutes = parseInt(e.target.value) || 40;
+        timeLeft = Math.min(minutes, 120) * 60;
+        updateTimer();
+    });
+
+    // Функция для показа состояния загрузки
+    function toggleLoading(button, isLoading) {
+        if (isLoading) {
+            button.innerHTML = `<i class="fas fa-spinner loading-spinner"></i> ${button.textContent}`;
+            button.disabled = true;
+        } else {
+            button.querySelector('i').classList.remove('fa-spinner', 'loading-spinner');
+            button.disabled = false;
+        }
+    }
+
     document.getElementById('startTimer').addEventListener('click', () => {
         if (!timerId) {
             timerId = setInterval(() => {
@@ -349,17 +430,20 @@
     });
 
     // Переключение типа задания
-    document.querySelectorAll('.test-type-btn').forEach(btn => {
+    document.querySelector('.test-type-selector').querySelectorAll('.test-type-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.test-type-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentType = this.querySelector('i').classList.contains('fa-pen-fancy') ? 'essay' : 'letter';
+            console.log(currentType)
         });
     });
 
     // Генерация темы
     document.querySelector('.generate-topic').addEventListener('click', async () => {
         const additional = document.getElementById('topicInput').value;
+        const button = document.querySelector('.generate-topic');
+        toggleLoading(button, true);
 
         try {
             const response = await fetch(`${API_URL}/generate-topic`, {
@@ -371,6 +455,7 @@
             const data = await response.json();
             document.getElementById('topicInput').value = data.topic;
             currentTopic = data.topic;
+            toggleLoading(button, false);
             showAIResponse('Topic generated successfully! 🌟');
         } catch (error) {
             showAIResponse('Error generating topic 😞', true);
@@ -378,7 +463,9 @@
     });
 
     // Генерация структуры
-    document.querySelector('#aiPanel [aria-label="Generate Outline"]').addEventListener('click', async () => {
+    document.querySelector('#structureButton').addEventListener('click', async () => {
+        const button = document.querySelector('#structureButton');
+        toggleLoading(button, true);
         try {
             const response = await fetch(`${API_URL}/generate-structure`, {
                 method: 'POST',
@@ -392,6 +479,7 @@
 
             const data = await response.json();
             editor.setValue(data.structure);
+            toggleLoading(button, false);
             showAIResponse('Structure generated successfully! 📝');
         } catch (error) {
             showAIResponse('Error generating structure 😞', true);
@@ -399,7 +487,9 @@
     });
 
     // Генерация словаря
-    document.querySelector('#aiPanel [aria-label="Show Phrases"]').addEventListener('click', async () => {
+    document.querySelector('#vocabularyButton').addEventListener('click', async () => {
+        const button = document.querySelector('#vocabularyButton');
+        toggleLoading(button, true);
         try {
             const response = await fetch(`${API_URL}/generate-vocabulary`, {
                 method: 'POST',
@@ -411,28 +501,64 @@
             const vocabularyList = data.vocabulary.split('\n').map(item => `
             <div class="vocab-item">
                 <i class="fas fa-angle-right"></i>
-                ${item.trim()}
+                ${formatText(item)}
             </div>
         `).join('');
 
-            document.querySelector('#vocabularyHelper').innerHTML = vocabularyList;
+            document.querySelector('.vocabularyHelper').innerHTML = vocabularyList;
+            toggleLoading(button, false);
             showAIResponse('Vocabulary generated successfully! 📚');
         } catch (error) {
+            console.log(error)
             showAIResponse('Error generating vocabulary 😞', true);
         }
     });
 
+    function formatText(text) {
+
+        // Разбиваем текст на блоки, разделяя на строки кода и обычный текст
+        const blocks = text.split(/(```[\s\S]*?```)/g);
+
+        return blocks.map(block => {
+            if (block.startsWith('```') && block.endsWith('```')) {
+                // Определяем язык из блока кода
+                const match = block.match(/```(\w+)/);
+                const language = match ? match[1] : 'plaintext';
+
+                // Экранируем HTML в содержимом блока кода
+                const escapeHTML = str => str.replace(/[&<>"']/g, tag => (
+                    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[tag] || tag
+                ));
+                const codeContent = escapeHTML(block.replace(/```(\w+)?/, '').replace(/```$/, ''));
+
+                // Подсвечиваем код с помощью Prism
+                const highlightedCode = Prism.highlight(codeContent, Prism.languages[language] || Prism.languages.plaintext, language);
+
+                // Возвращаем форматированный блок кода
+                return `<pre><code class="language-${language}">${highlightedCode}</code></pre>`;
+            } else {
+                // Форматируем обычный текст
+                block = block
+                    .replace(/^##\s*(.*)$/gm, '<h2>$1</h2>') // Заголовки уровня 2
+                    .replace(/\*\*(.*?)\*\*/g, '<strong><span class="bold">$1</span></strong>') // Жирный текст
+                    .replace(/_(.*?)_/g, '<em>$1</em>') // Курсив
+                    .replace(/(?<!\*)\*(?!\*)/g, '<span class="bold">  •</span>') // Маркеры
+                    .replace(/\n/g, '<br>'); // Переносы строк
+
+                return block;
+            }
+        }).join('');
+    }
+
     // Re-Editor Logic
     function updateReEditorUI() {
-        const reEditorSection = document.querySelector('#reEditor');
+        const reEditorSection = document.querySelector('#Re-EditorSection');
         if (selectedText) {
             reEditorSection.innerHTML = `
-            <div class="re-editor-content">
-                <h4>Selected Text:</h4>
+            <h4>Selected Text:</h4>
                 <p>${selectedText}</p>
                 <button class="test-type-btn" id="rephraseBtn">Rephrase</button>
                 <div class="rephrased-result" id="rephrasedResult"></div>
-            </div>
         `;
 
             document.getElementById('rephraseBtn').addEventListener('click', handleRephrase);
@@ -476,6 +602,8 @@
 
     // Проверка текста
     document.getElementById('checkBtn').addEventListener('click', async () => {
+        const button = document.getElementById('checkBtn');
+        toggleLoading(button, true);
         try {
             const response = await fetch(`${API_URL}/check-text`, {
                 method: 'POST',
@@ -488,22 +616,41 @@
             });
 
             const data = await response.json();
+            toggleLoading(button, false);
             showCheckResults(data);
         } catch (error) {
             showAIResponse('Error checking text 😞', true);
         }
     });
 
+    // Улучшенный обработчик проверки текста
     function showCheckResults(data) {
         const resultDiv = document.createElement('div');
         resultDiv.className = 'check-results';
         resultDiv.innerHTML = `
-        <h3>Check Results 📊</h3>
-        <div class="results-content">${data.replace(/\n/g, '<br>')}</div>
+        <div class="results-header">
+            <h3>Check Results 📊</h3>
+            <button class="close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="results-content">${formatText(data)}</div>
     `;
 
+        resultDiv.querySelector('.close-btn').addEventListener('click', () => {
+            gsap.to(resultDiv, {
+                opacity: 0,
+                y: 50,
+                duration: 0.3,
+                onComplete: () => resultDiv.remove()
+            });
+        });
+
         document.body.appendChild(resultDiv);
-        gsap.from(resultDiv, { y: 50, opacity: 0, duration: 0.3 });
+        gsap.from(resultDiv, {
+            y: 50,
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.out'
+        });
     }
 
     // Вспомогательные функции
