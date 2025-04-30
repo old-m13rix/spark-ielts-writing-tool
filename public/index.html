@@ -17,8 +17,8 @@
         }
 
         strong {
-            color: #6c5ce7;
-            text-shadow: 0 0 6px rgba(108, 92, 231, 0.7);
+            color: var(--primary-color);
+            text-shadow: 0 0 6px rgba(108, 92, 231, 0.6);
         }
 
         body {
@@ -202,6 +202,7 @@
             max-width: 600px;
             max-height: 80vh;
             overflow-y: auto;
+            backdrop-filter: blur(4px);
         }
 
         .vocab-item {
@@ -604,6 +605,7 @@
     document.getElementById('checkBtn').addEventListener('click', async () => {
         const button = document.getElementById('checkBtn');
         toggleLoading(button, true);
+        console.log("Topic: " + currentTopic)
         try {
             const response = await fetch(`${API_URL}/check-text`, {
                 method: 'POST',

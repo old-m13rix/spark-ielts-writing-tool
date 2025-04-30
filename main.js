@@ -186,7 +186,7 @@ Evaluate the provided IELTS Writing submission against the official IELTS criter
 });
 
 const generationConfig = {
-    temperature: 1,
+    temperature: 0.5,
     topP: 0.95,
     topK: 40,
     maxOutputTokens: 8192,
